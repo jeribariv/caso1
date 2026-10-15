@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clínica Salud Integral - Gestión de citas</title>
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+<nav class="navbar navbar-dark bg-dark">
+  <div class="container"><span class="navbar-brand mb-0">Clínica Salud Integral - Gestión de citas</span></div>
+</nav>
+<div class="container my-4">
+  <div id="mensajes"></div>
+
+  <div class="card shadow-sm mb-4"><div class="card-body">
+    <div class="input-group">
+      <span class="input-group-text">Buscar por paciente, médico o fecha:</span>
+      <input id="txtBuscar" class="form-control" type="text">
+      <button class="btn btn-primary" onclick="filtrar('Buscar')">Buscar</button>
+    </div>
+  </div></div>
+  <div class="card shadow-sm mb-4">
+    <div class="card-body">
+      <div class="row g-3"><div class="col-md-6"><label for="id_cita" class="form-label fw-semibold">ID Cita:</label><input id="id_cita" class="form-control bg-light" readonly></div><div class="col-md-6"><label for="paciente" class="form-label fw-semibold">Paciente:</label><select id="paciente" class="form-select"><option value="">Seleccione...</option><option>Juan Pérez Rojas</option><option>María Torres Díaz</option><option>Luis Ramos Soto</option></select></div><div class="col-md-6"><label for="medico" class="form-label fw-semibold">Médico:</label><select id="medico" class="form-select"><option value="">Seleccione...</option><option>Dr. Carlos Mendoza</option><option>Dra. Ana Quispe</option><option>Dr. Pedro Lazo</option></select></div><div class="col-md-6"><label for="especialidad" class="form-label fw-semibold">Especialidad:</label><select id="especialidad" class="form-select"><option value="">Seleccione...</option><option>Medicina general</option><option>Pediatría</option><option>Odontología</option><option>Cardiología</option></select></div><div class="col-md-6"><label for="fecha" class="form-label fw-semibold">Fecha:</label><input id="fecha" type="date" class="form-control"></div><div class="col-md-6"><label for="hora" class="form-label fw-semibold">Hora:</label><select id="hora" class="form-select"><option value="">Seleccione...</option><option>08:00</option><option>08:30</option><option>09:00</option><option>09:30</option><option>10:00</option><option>10:30</option><option>11:00</option><option>11:30</option><option>12:00</option><option>12:30</option><option>13:00</option><option>13:30</option><option>14:00</option><option>14:30</option><option>15:00</option><option>15:30</option><option>16:00</option><option>16:30</option><option>17:00</option><option>17:30</option></select></div><div class="col-12"><label for="motivo" class="form-label fw-semibold">Motivo:</label><textarea id="motivo" class="form-control" rows="3"></textarea></div><div class="col-md-6"><label for="estado" class="form-label fw-semibold">Estado:</label><select id="estado" class="form-select"><option value="">Seleccione...</option><option>Desarrollo de Sistemas de Información</option><option>Administración</option><option>Contabilidad</option></select></div></div>
+      <div class="mt-4 d-flex gap-2 flex-wrap"><button class="btn btn-primary" onclick="ejecutar(0)">Programar</button><button class="btn btn-primary" onclick="ejecutar(1)">Reprogramar</button><button class="btn btn-danger" onclick="ejecutar(2)">Cancelar cita</button><button class="btn btn-primary" onclick="ejecutar(3)">Consultar disponibilidad</button><button class="btn btn-secondary" onclick="ejecutar(4)">Limpiar</button></div>
+    </div>
+  </div>
+
+  <div class="card shadow-sm">
+    <div class="table-responsive">
+      <table class="table table-hover table-striped mb-0">
+        <thead class="table-dark"><tr><th>ID</th><th>Paciente</th><th>Médico</th><th>Fecha</th><th>Hora</th><th>Estado</th></tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+const CAMPOS = [{"k": "id_cita", "l": "ID Cita", "t": "auto", "r": false}, {"k": "paciente", "l": "Paciente", "t": "select", "o": ["Juan Pérez Rojas", "María Torres Díaz", "Luis Ramos Soto"], "r": true}, {"k": "medico", "l": "Médico", "t": "select", "o": ["Dr. Carlos Mendoza", "Dra. Ana Quispe", "Dr. Pedro Lazo"], "r": true}, {"k": "especialidad", "l": "Especialidad", "t": "select", "o": ["Medicina general", "Pediatría", "Odontología", "Cardiología"], "r": true}, {"k": "fecha", "l": "Fecha", "t": "date", "r": true}, {"k": "hora", "l": "Hora", "t": "select", "o": ["08:00", "08:30", "09:00", "09:30", "10:00", "10:30", "11:00", "11:30", "12:00", "12:30", "13:00", "13:30", "14:00", "14:30", "15:00", "15:30", "16:00", "16:30", "17:00", "17:30"], "r": true}, {"k": "motivo", "l": "Motivo", "t": "area", "r": false}, {"k": "estado", "l": "Estado", "t": "select", "o": ["Desarrollo de Sistemas de Información", "Administración", "Contabilidad"], "r": true}];
+const COLUMNAS = [{"k": "id_cita", "l": "ID"}, {"k": "paciente", "l": "Paciente"}, {"k": "medico", "l": "Médico"}, {"k": "fecha", "l": "Fecha"}, {"k": "hora", "l": "Hora"}, {"k": "estado", "l": "Estado"}];
+const BOTONES = [{"l": "Programar", "a": "add"}, {"l": "Reprogramar", "a": "update"}, {"l": "Cancelar cita", "a": "cancel"}, {"l": "Consultar disponibilidad", "a": "filter"}, {"l": "Limpiar", "a": "clear"}];
+const MODO = "crud";
+const AUTOS = ["id_cita"];
+let datos = [{"_id": 1, "id_cita": 1, "paciente": "Juan Pérez Rojas", "medico": "Dr. Carlos Mendoza", "especialidad": "Medicina general", "fecha": "2026-10-10", "hora": "08:00", "motivo": "", "estado": "Desarrollo de Sistemas de Información"}, {"_id": 2, "id_cita": 2, "paciente": "María Torres Díaz", "medico": "Dra. Ana Quispe", "especialidad": "Pediatría", "fecha": "2026-10-11", "hora": "08:30", "motivo": "", "estado": "Administración"}, {"_id": 3, "id_cita": 3, "paciente": "Luis Ramos Soto", "medico": "Dr. Pedro Lazo", "especialidad": "Odontología", "fecha": "2026-10-12", "hora": "09:00", "motivo": "", "estado": "Contabilidad"}];
+let seleccionado = null;
+let vista = datos;
+let siguiente = datos.reduce((m, d) => Math.max(m, d._id), 0) + 1;
+
+const $ = id => document.getElementById(id);
+const hoy = () => new Date().toISOString().slice(0, 10);
+const esc = t => String(t).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+const H = { calcular(){}, validar(d,a){ return ''; }, limpiar(){}, linea(){} };
+
+function calcular() { H.calcular(); }
+
+function mensaje(texto, tipo) {
+  $('mensajes').innerHTML =
+    '<div class="alert alert-' + tipo + ' alert-dismissible fade show" role="alert">' + esc(texto) +
+    '<button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
+}
+
+function valorInicial(c) {
+  if (c.t === 'auto') return 'Automático';
+  if (c.t === 'g' && c.h) return hoy();
+  return '';
+}
+
+function pintarTabla(lista) {
+  vista = lista;
+  const tb = $('tbody');
+  if (lista.length === 0) {
+    tb.innerHTML = '<tr><td colspan="' + COLUMNAS.length + '" class="text-center text-muted">No se encontraron registros</td></tr>';
+    return;
+  }
+  tb.innerHTML = lista.map(d =>
+    '<tr style="cursor:pointer" class="' + (d._id === seleccionado ? 'table-primary' : '') + '" onclick="cargar(' + d._id + ')">' +
+    COLUMNAS.map(c => '<td>' + esc(d[c.k] === undefined ? '' : d[c.k]) + '</td>').join('') + '</tr>'
+  ).join('');
+}
+
+function limpiar() {
+  seleccionado = null;
+  CAMPOS.forEach(c => { $(c.k).value = valorInicial(c); });
+  if ($('txtBuscar')) $('txtBuscar').value = '';
+  H.limpiar();
+  calcular();
+  pintarTabla(datos);
+}
+
+function leerFormulario() {
+  const d = {};
+  CAMPOS.forEach(c => { if (c.t !== 'auto') d[c.k] = $(c.k).value.trim(); });
+  CAMPOS.filter(c => c.h).forEach(c => { d[c.k] = hoy(); });
+  return d;
+}
+
+function validar(d, accion) {
+  for (const c of CAMPOS) {
+    if (!c.r) continue;
+    if (d[c.k] === '') return 'Complete el campo "' + c.l + '".';
+    if (c.p && !new RegExp(c.p).test(d[c.k])) return c.m;
+    if (c.t === 'number' && Number(d[c.k]) < 0) return 'El campo "' + c.l + '" no puede ser negativo.';
+  }
+  return H.validar(d, accion);
+}
+
+function guardar(modificar) {
+  if (modificar && seleccionado === null) { mensaje('Primero seleccione un registro de la tabla.', 'warning'); return; }
+  const d = leerFormulario();
+  const error = validar(d, modificar ? 'update' : 'add');
+  if (error) { mensaje(error, 'danger'); return; }
+  if (modificar) {
+    d._id = seleccionado;
+    AUTOS.forEach(k => { d[k] = seleccionado; });
+    datos = datos.map(x => x._id === seleccionado ? Object.assign({}, x, d) : x);
+  } else {
+    d._id = siguiente++;
+    AUTOS.forEach(k => { d[k] = d._id; });
+    COLUMNAS.forEach(c => { if (d[c.k] === undefined) d[c.k] = '—'; });
+    datos.push(d);
+  }
+  limpiar();
+  mensaje(modificar ? 'Registro modificado correctamente.' : 'Registro agregado correctamente.', 'success');
+}
+
+function cancelar() {
+  if (seleccionado === null) { mensaje('Primero seleccione un registro de la tabla.', 'warning'); return; }
+  if (!confirm('¿Seguro que desea cancelar este registro?')) return;
+  const campo = CAMPOS.find(c => c.t === 'select' && /estado/i.test(c.l));
+  const op = campo ? campo.o.find(o => /cancel/i.test(o)) : null;
+  if (op) {
+    datos = datos.map(x => x._id === seleccionado ? Object.assign({}, x, {[campo.k]: op}) : x);
+  } else {
+    datos = datos.filter(x => x._id !== seleccionado);
+  }
+  limpiar();
+  mensaje('Registro cancelado correctamente.', 'success');
+}
+
+function filtrar(etiqueta) {
+  const tb = $('txtBuscar');
+  const t = tb ? tb.value.trim().toLowerCase() : '';
+  let res = datos.filter(d => !t || COLUMNAS.some(c => String(d[c.k] === undefined ? '' : d[c.k]).toLowerCase().includes(t)));
+  CAMPOS.forEach(c => {
+    if (c.t === 'auto' || c.t === 'g' || c.t === 'area') return;
+    const v = $(c.k).value.trim();
+    if (!v || /^(todos|todas)$/i.test(v)) return;
+    if (!COLUMNAS.some(x => x.k === c.k)) return;
+    res = res.filter(d => String(d[c.k] === undefined ? '' : d[c.k]).toLowerCase().includes(v.toLowerCase()));
+  });
+  if (/vencimiento/i.test(etiqueta)) res = res.filter(d => d.estado === 'Vencido');
+  if (/disponibilidad/i.test(etiqueta) && CAMPOS.some(c => c.k === 'disponibilidad' || (c.o && c.o.includes('Disponible'))))
+    res = res.filter(d => d.estado === 'Disponible' || d.disponibilidad === 'Disponible');
+  pintarTabla(res);
+  mensaje(res.length ? 'Se encontraron ' + res.length + ' registro(s).' : 'No se encontraron resultados.', res.length ? 'success' : 'info');
+}
+
+function ejecutar(i) {
+  const b = BOTONES[i];
+  if (b.a === 'clear') limpiar();
+  else if (b.a === 'filter') filtrar(b.l);
+  else if (b.a === 'linea') H.linea();
+  else if (b.a === 'add') guardar(false);
+  else if (b.a === 'update') guardar(true);
+  else if (b.a === 'upsert') guardar(seleccionado !== null);
+  else if (b.a === 'cancel') cancelar();
+}
+
+function cargar(id) {
+  if (MODO === 'consulta') return;
+  const d = datos.find(x => x._id === id);
+  if (!d) return;
+  seleccionado = id;
+  CAMPOS.forEach(c => { $(c.k).value = c.t === 'auto' ? d._id : (d[c.k] === undefined ? '' : d[c.k]); });
+  calcular();
+  pintarTabla(vista);
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+  CAMPOS.forEach(c => {
+    $(c.k).addEventListener('input', calcular);
+    $(c.k).addEventListener('change', calcular);
+  });
+  if ($('txtBuscar')) $('txtBuscar').addEventListener('keydown', e => { if (e.key === 'Enter') filtrar('Buscar'); });
+  limpiar();
+});
+</script>
+</body>
+</html>
